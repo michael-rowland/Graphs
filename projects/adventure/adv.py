@@ -6,7 +6,7 @@ import random
 from ast import literal_eval
 
 
-def runner(traversal_path=[]):
+def setup():
     # Load world
     world = World()
 
@@ -24,7 +24,10 @@ def runner(traversal_path=[]):
     # Print an ASCII map
     world.print_rooms()
     player = Player(world.starting_room)
+    return world, player, room_graph
 
+
+def test(world, player, room_graph, traversal_path=[]):
     # TRAVERSAL TEST
     visited_rooms = set()
     player.current_room = world.starting_room
@@ -57,4 +60,5 @@ def runner(traversal_path=[]):
 
 
 if __name__ == "__main__":
-    runner()
+    world, player, room_graph = setup()
+    test(world, player, room_graph)
