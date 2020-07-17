@@ -6,7 +6,7 @@ import random
 from ast import literal_eval
 
 
-verbose = False
+verbose = True
 # Load world
 world = World()
 
@@ -26,9 +26,10 @@ if verbose:
     world.print_rooms()
 
 player = Player(world.starting_room)
+unexplored = []
 
 traversal_path = []
-reverse_path = []
+# reverse_path = []
 visited = {}
 movement = {"n": "s", "e": "w", "s": "n", "w": "e"}
 
@@ -37,26 +38,19 @@ exits = player.current_room.get_exits()
 current = player.current_room.id
 visited[current] = {k: v for (k, v) in zip(exits, [None] * len(exits))}
 
-# helper function to determine which direction to go next
-def descend(exits):
-    options = {k for k, v in exits.items() if v == None}
-    return [i for i in ["n", "e", "s", "w"] if i in options]
-
-
 while len(visited) < len(room_graph):
     exits = player.current_room.get_exits()
     current = player.current_room.id
-    options = descend(visited[current])
-    # options = [
-    #     i
-    #     for i in ["n", "e", "s", "w"]
-    #     if i in [k for k, v in visited[current].items() if v == None]
-    # ]
+    options = [
+        i
+        for i in ["n", "e", "s", "w"]
+        if i in [k for k, v in visited[current].items() if v == None]
+    ]
     if len(options):
         moved_from = current
         player.travel(options[0])
         traversal_path.append(options[0])
-        reverse_path.append(movement[options[0]])
+        # reverse_path.append(movement[options[0]])
         current = player.current_room.id
         # if new room is not in visited, add it
         if current not in visited:
@@ -67,22 +61,43 @@ while len(visited) < len(room_graph):
         # in either case, map where we just came from
         visited[moved_from][options[0]] = current
         visited[current][movement[options[0]]] = moved_from
+        # if there is an unexplored route in the place we just came from
+        if len([i for i in visited[moved_from].values() if i == None]) == 0:
+            if moved_from in unexplored:
+                unexplored.remove(moved_from)
+        else:
+            if moved_from not in unexplored:
+                unexplored.append(moved_from)
         if verbose:
             print(f"Moved {options[0]} ({moved_from} -> {current})")
     else:
-        # backtrack until we find a route with an unexplored area
-        explored = True
-        while explored:
-            moved_from = current
-            backtrack = reverse_path.pop()
-            player.travel(backtrack)
-            traversal_path.append(backtrack)
-            current = player.current_room.id
-            if verbose:
-                print(f"Moved {backtrack} ({moved_from} -> {current})")
-            if len(descend(visited[current])) > 0:
-                explored = False
-
+        # BREADTH FIRST SEARCH
+        print(unexplored)
+        queue = [("", current)]
+        destination = unexplored[-1]
+        while len(queue):
+            # moved_from = current
+            directions, current_node = queue.pop(0)
+            if current_node == destination:
+                # move there
+                for move in directions:
+                    moved_from = current
+                    player.travel(move)
+                    if len([i for i in visited[moved_from].values() if i == None]) == 0:
+                        if moved_from in unexplored:
+                            unexplored.remove(moved_from)
+                    else:
+                        if moved_from not in unexplored:
+                            unexplored.append(moved_from)
+                    traversal_path.append(move)
+                    current = player.current_room.id
+                    if verbose:
+                        print(f"Moved {move} ({moved_from} -> {current})")
+                queue = []
+            else:
+                for next_dir, next_node in visited[current_node].items():
+                    path = directions + next_dir
+                    queue.append((path, next_node))
 
 # TRAVERSAL TEST
 visited_rooms = set()
